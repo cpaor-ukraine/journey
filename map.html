@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Displacement Pathways</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --blue: #00aeef;
+            --red: #e2231a;
+            --yellow: #ffb500;
+            --bg: #f4f7f6;
+            --panel-width: 360px;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        /* --- VIEWPORT & CANVAS --- */
+        #viewport {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+            position: relative;
+            overflow: hidden;
+        }
+        #viewport:active { cursor: grabbing; }
+
+        #transform-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: 0 0;
+            will-change: transform;
+        }
+
+        /* --- SVG LAYER --- */
+        #svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: visible;
+        }
+
+        .edge {
+            fill: none;
+            stroke: #a0aec0;
+            stroke-width: 2px;
+            stroke-linejoin: round;
+            stroke-linecap: round;
+            transition: stroke 0.3s;
+        }
+
+        .edge.dotted { stroke-dasharray: 6, 4; }
+
+        /* --- NODES --- */
+        .node {
+            position: absolute;
+            width: 180px;
+            padding: 12px 15px;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+            cursor: pointer;
+            z-index: 1;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 54px;
+            box-sizing: border-box;
+            background: #fff;
+        }
+
+        .node:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+            z-index: 10;
+        }
+
+        .node.blue { background: linear-gradient(135deg, #00aeef, #0090c5); }
+        .node.red { background: linear-gradient(135deg, #e2231a, #bd1c14); }
+        .node.yellow { 
+            background: linear-gradient(135deg, #ffb500, #e0a000); 
+            color: #1a202c; 
+        }
+        
+        .node.wide { width: 400px; }
+
+        /* --- CONTROLS --- */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 90;
+        }
+        .btn {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            cursor: pointer;
+            font-size: 16px;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: #edf2f7; transform: scale(1.1); }
+
+        /* --- PANEL --- */
+        .panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: var(--panel-width);
+            height: 100%;
+            background: white;
+            box-shadow: -5px 0 30px rgba(0,0,0,0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel.open { transform: translateX(0); }
+
+        @media (max-width: 768px) {
+            .panel {
+                top: auto;
+                bottom: 0;
+                width: 100%;
+                height: 60vh;
+                transform: translateY(100%);
+                border-top-left-radius: 20px;
+                border-top-right-radius: 20px;
+            }
+            .panel.open { transform: translateY(0); }
+            .controls { bottom: 20px; left: 20px; flex-direction: row; }
+        }
+
+        .panel-header {
+            padding: 25px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .panel-tag {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            font-weight: 800;
+            background: #e2e8f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .panel-title { margin: 0; color: #1e293b; font-size: 22px; line-height: 1.2; }
+        .panel-body { padding: 25px; line-height: 1.6; color: #475569; overflow-y: auto; }
+        
+        .close-btn { 
+            position: absolute; top: 20px; right: 20px; 
+            background: #edf2f7; border: none; 
+            width: 32px; height: 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<div id="viewport">
+    <div id="transform-layer">
+        <!-- SVG LAYER -->
+        <svg id="svg-layer">
+            <defs>
+                <!-- Small, sharp arrow -->
+                <marker id="arrow" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,5 L5,2.5 z" fill="#a0aec0" />
+                </marker>
+            </defs>
+            <!-- Paths -->
+        </svg>
+        <!-- Nodes -->
+        <div id="node-container"></div>
+    </div>
+</div>
+
+<div class="controls">
+    <button class="btn" onclick="zoom(1.2)"><i class="fas fa-plus"></i></button>
+    <button class="btn" onclick="zoom(0.8)"><i class="fas fa-minus"></i></button>
+    <button class="btn" onclick="fitToScreen()"><i class="fas fa-expand"></i></button>
+</div>
+
+<div id="sidePanel" class="panel">
+    <button class="close-btn" onclick="closePanel()"><i class="fas fa-times"></i></button>
+    <div class="panel-header">
+        <span id="pTag" class="panel-tag">Tag</span>
+        <h2 id="pTitle" class="panel-title">Title</h2>
+    </div>
+    <div class="panel-body">
+        <p id="pDesc">Description text.</p>
+    </div>
+</div>
+
+<script>
+    /* --- DATA & LAYOUT --- */
+    const nodes = [
+        { id: 'n1', x: 700, y: 50,  w: 180, label: 'Pre-crisis life', type: 'blue', meta: { tag: 'Phase 1', desc: 'Standard living conditions before the onset of conflict.' } },
+        { id: 'n2', x: 700, y: 180, w: 180, label: 'Conflict exposure', type: 'red', meta: { tag: 'Phase 2', desc: 'Direct impact of hostilities on the civilian population.' } },
+        { id: 'n3', x: 700, y: 310, w: 180, label: 'Evacuation', type: 'yellow', meta: { tag: 'Action', desc: 'The organized or spontaneous movement of people away from immediate danger.' } },
+        
+        { id: 'n4', x: 200, y: 440, w: 180, label: 'Occupied Territories', type: 'blue', meta: { tag: 'Destination', desc: 'Displacement into territories not under government control.' } },
+        { id: 'n5', x: 450, y: 440, w: 180, label: 'Frontline children', type: 'blue', meta: { tag: 'Vulnerable', desc: 'Children remaining in areas close to active combat lines.' } },
+        
+        { id: 'n6', x: 950, y: 440, w: 180, label: 'Evacuation Process', type: 'blue', meta: { tag: 'Process', desc: 'Logistics, transit, and mechanisms involved in moving people.' } },
+        
+        { id: 'n7', x: 1250, y: 500, w: 180, label: 'Family separation', type: 'red', meta: { tag: 'Risk', desc: 'Involuntary separation of family members during transit.' } },
+        { id: 'n8', x: 1450, y: 620, w: 180, label: 'Institutional Care', type: 'red', meta: { tag: 'Outcome', desc: 'Placement of unaccompanied children into institutional facilities.' } },
+
+        { id: 'n9', x: 780, y: 570, w: 180, label: 'Transit Centers', type: 'blue', meta: { tag: 'Shelter', desc: 'Short-term holding centers for registration and rest.' } },
+        { id: 'n10', x: 1120, y: 570, w: 180, label: 'Community Living', type: 'blue', meta: { tag: 'Shelter', desc: 'Staying with host families, renting, or independent living.' } },
+
+        { id: 'n11', x: 780, y: 700, w: 180, label: 'Collective sites', type: 'red', meta: { tag: 'Shelter', desc: 'Public buildings (schools, gyms) converted into mass shelters.' } },
+        
+        { id: 'n12', x: 700, y: 830, w: 400, label: 'Protracted displacement', type: 'red', className: 'wide', meta: { tag: 'Phase 3', desc: 'Displacement lasting for extended periods (6+ months) without durable solutions.' } },
+        
+        { id: 'n13', x: 500, y: 960, w: 180, label: 'Post-displacement', type: 'yellow', meta: { tag: 'Phase 4', desc: 'Pathways towards durable solutions.' } },
+        
+        { id: 'n14', x: 200, y: 1090, w: 180, label: 'Return to Risk', type: 'red', meta: { tag: 'Outcome', desc: 'Premature or unsafe return to area of origin.' } },
+        { id: 'n15', x: 800, y: 1090, w: 180, label: 'Local integration', type: 'blue', meta: { tag: 'Outcome', desc: 'Full legal, economic, and social integration.' } },
+    ];
+
+    const connections = [
+        { from: 'n1', to: 'n2', type: 'straight' },
+        { from: 'n2', to: 'n3', type: 'straight' },
+        { from: 'n3', to: 'n4', type: 'fork-left-far' },
+        { from: 'n3', to: 'n5', type: 'fork-left-near' },
+        { from: 'n3', to: 'n6', type: 'fork-right-near' },
+        { from: 'n6', to: 'n9', type: 'fork-down-left' },
+        { from: 'n6', to: 'n10', type: 'fork-down-right' },
+        { from: 'n6', to: 'n7', type: 'side-dotted' },
+        { from: 'n7', to: 'n8', type: 'side-dotted-down' },
+        { from: 'n9', to: 'n11', type: 'straight' },
+        { from: 'n10', to: 'n12', type: 'ortho-deep' }, 
+        { from: 'n11', to: 'n12', type: 'elbow-in' },
+        { from: 'n12', to: 'n13', type: 'elbow-left-step' },
+        { from: 'n13', to: 'n14', type: 'fork-left-btm' },
+        { from: 'n13', to: 'n15', type: 'fork-right-btm' }
+    ];
+
+    // --- RENDER ENGINE ---
+    const container = document.getElementById('node-container');
+    const svg = document.getElementById('svg-layer');
+
+    // Create Nodes
+    nodes.forEach(n => {
+        const el = document.createElement('div');
+        el.className = `node ${n.type} ${n.className || ''}`;
+        el.style.left = n.x + 'px';
+        el.style.top = n.y + 'px';
+        el.style.width = n.w + 'px';
+        el.textContent = n.label;
+        
+        const activate = (e) => {
+            e.stopPropagation();
+            openPanel(n);
+        };
+        el.addEventListener('click', activate);
+        el.addEventListener('touchstart', activate, {passive: true});
+
+        container.appendChild(el);
+    });
+
+    // Create Connectors
+    connections.forEach(conn => {
+        const start = nodes.find(n => n.id === conn.from);
+        const end = nodes.find(n => n.id === conn.to);
+
+        const startX = start.x + (start.w) / 2;
+        const startY = start.y + 54; 
+        
+        const endX = end.x + (end.w) / 2;
+        const endY = end.y; 
+
+        let d = '';
+
+        if (conn.type === 'straight') {
+            d = `M ${startX} ${startY} L ${endX} ${endY - 6}`;
+        }
+        else if (conn.type.includes('fork-left')) {
+            const midY = startY + 25;
+            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
+        }
+        else if (conn.type.includes('fork-right')) {
+            const midY = startY + 25;
+            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
+        }
+        else if (conn.type === 'fork-down-left') {
+            const midY = endY - 25;
+            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
+        }
+        else if (conn.type === 'fork-down-right') {
+            const midY = endY - 25;
+            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
+        }
+        else if (conn.type === 'ortho-deep') {
+            const deepY = 790; 
+            d = `M ${startX} ${startY} L ${startX} ${deepY} L ${endX + 80} ${deepY} L ${endX + 80} ${endY - 6}`; 
+        }
+        else if (conn.type === 'elbow-in') {
+            const midY = (startY + endY)/2;
+            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
+        }
+        else if (conn.type === 'elbow-left-step') {
+            d = `M ${startX} ${startY} L ${startX} ${endY - 25} L ${endX} ${endY - 25} L ${endX} ${endY - 6}`;
+        }
+        else if (conn.type === 'side-dotted') {
+            const sRx = start.x + start.w;
+            const sRy = start.y + 27;
+            const eLx = end.x;
+            const eLy = end.y + 27;
+            d = `M ${sRx} ${sRy} C ${sRx+50} ${sRy}, ${eLx-50} ${eLy}, ${eLx - 6} ${eLy}`;
+        }
+        else if (conn.type === 'side-dotted-down') {
+            const sRx = start.x + start.w;
+            const sRy = start.y + 27;
+            const eLx = end.x;
+            const eLy = end.y + 27;
+            d = `M ${sRx} ${sRy} L ${eLx - 30} ${sRy} L ${eLx - 30} ${eLy} L ${eLx - 6} ${eLy}`;
+        }
+        else if (conn.type === 'fork-left-btm') {
+            const midY = endY - 25;
+            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
+        }
+        else if (conn.type === 'fork-right-btm') {
+            const midY = endY - 25;
+            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
+        }
+
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute("d", d);
+        path.setAttribute("class", "edge " + (conn.type.includes('dotted') ? "dotted" : ""));
+        path.setAttribute("marker-end", "url(#arrow)");
+        svg.appendChild(path);
+    });
+
+    // --- PAN & ZOOM LOGIC ---
+    let scale = 1;
+    let pX = 0, pY = 0;
+    const layer = document.getElementById('transform-layer');
+    const viewport = document.getElementById('viewport');
+
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
+    function updateTransform() {
+        layer.style.transform = `translate(${pX}px, ${pY}px) scale(${scale})`;
+    }
+
+    // Auto-fit function
+    function fitToScreen() {
+        // Find bounds of all nodes
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        nodes.forEach(n => {
+            if(n.x < minX) minX = n.x;
+            if(n.x + n.w > maxX) maxX = n.x + n.w;
+            if(n.y < minY) minY = n.y;
+            if(n.y + 54 > maxY) maxY = n.y + 54;
+        });
+
+        // Add padding
+        const padding = 50;
+        const contentW = (maxX - minX) + (padding * 2);
+        const contentH = (maxY - minY) + (padding * 2);
+        
+        const viewW = window.innerWidth;
+        const viewH = window.innerHeight;
+
+        // Calculate Scale to fit
+        const scaleX = viewW / contentW;
+        const scaleY = viewH / contentH;
+        scale = Math.min(scaleX, scaleY, 1); // Max scale 1 to prevent zooming in too much on large screens
+
+        // Calculate Position to center
+        // Center of content in node coords
+        const contentCenterX = minX + (maxX - minX) / 2;
+        const contentCenterY = minY + (maxY - minY) / 2;
+
+        pX = (viewW / 2) - (contentCenterX * scale);
+        pY = (viewH / 2) - (contentCenterY * scale);
+
+        updateTransform();
+    }
+
+    // Mouse Events
+    viewport.addEventListener('mousedown', e => {
+        isDragging = true;
+        startX = e.clientX - pX;
+        startY = e.clientY - pY;
+    });
+    window.addEventListener('mouseup', () => isDragging = false);
+    window.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        e.preventDefault();
+        pX = e.clientX - startX;
+        pY = e.clientY - startY;
+        updateTransform();
+    });
+
+    // Touch Events
+    viewport.addEventListener('touchstart', e => {
+        if(e.touches.length === 1) {
+            isDragging = true;
+            startX = e.touches[0].clientX - pX;
+            startY = e.touches[0].clientY - pY;
+        }
+    }, {passive: false});
+    
+    window.addEventListener('touchend', () => isDragging = false);
+    
+    window.addEventListener('touchmove', e => {
+        if (!isDragging) return;
+        e.preventDefault(); 
+        pX = e.touches[0].clientX - startX;
+        pY = e.touches[0].clientY - startY;
+        updateTransform();
+    }, {passive: false});
+
+    window.zoom = (factor) => {
+        scale *= factor;
+        scale = Math.min(Math.max(0.3, scale), 2);
+        updateTransform();
+    };
+    
+    window.resetZoom = fitToScreen;
+
+    // --- PANEL LOGIC ---
+    function openPanel(data) {
+        document.getElementById('pTitle').textContent = data.label;
+        document.getElementById('pTag').textContent = data.meta.tag;
+        document.getElementById('pDesc').textContent = data.meta.desc;
+        
+        const tag = document.getElementById('pTag');
+        if(data.type === 'blue') { tag.style.color = '#00aeef'; tag.style.background = '#e0f7ff'; }
+        else if(data.type === 'red') { tag.style.color = '#e2231a'; tag.style.background = '#ffe5e5'; }
+        else { tag.style.color = '#d69e00'; tag.style.background = '#fff8dc'; }
+
+        document.getElementById('sidePanel').classList.add('open');
+    }
+
+    window.closePanel = () => {
+        document.getElementById('sidePanel').classList.remove('open');
+    };
+
+    // Initial Load
+    window.onload = fitToScreen;
+    window.onresize = fitToScreen;
+
+</script>
+</body>
+</html>
