@@ -3,35 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Displacement Pathways</title>
+    <title>Displacement Pathways / Шляхи Переміщення</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
             --blue: #00aeef;
             --red: #e2231a;
             --yellow: #ffb500;
-            --bg: #f4f7f6;
             --purple: #8e44ad;
-            --panel-width: 360px;
+            --green: #27ae60;
+            --bg: #f0f2f5;
+            --panel-width: 400px;
+            --header-bg: rgba(255, 255, 255, 0.95);
         }
 
         body {
             margin: 0;
             background-color: var(--bg);
-            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
             overflow: hidden;
             width: 100vw;
             height: 100vh;
             touch-action: none;
         }
 
-        /* --- VIEWPORT & CANVAS --- */
+        /* --- FLOATING HEADER --- */
+        .floating-header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 380px;
+            background: var(--header-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            z-index: 50;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .header-logo {
+            width: 100%;
+            height: auto;
+            max-height: 80px;
+            object-fit: contain;
+            object-position: left;
+            margin-bottom: 15px;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2c3e50;
+            margin: 0 0 15px 0;
+            line-height: 1.3;
+        }
+
+        .lang-switch {
+            display: flex;
+            background: #e0e6ed;
+            border-radius: 8px;
+            padding: 4px;
+            width: fit-content;
+        }
+
+        .lang-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            color: #7f8c8d;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            background: white;
+            color: var(--blue);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* --- VIEWPORT --- */
         #viewport {
             width: 100%;
             height: 100%;
             cursor: grab;
             position: relative;
-            overflow: hidden;
         }
         #viewport:active { cursor: grabbing; }
 
@@ -42,16 +101,14 @@
             width: 100%;
             height: 100%;
             transform-origin: 0 0;
-            will-change: transform;
         }
 
-        /* --- SVG LAYER --- */
         #svg-layer {
             position: absolute;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 5000px;
+            height: 5000px;
             pointer-events: none;
             z-index: 0;
             overflow: visible;
@@ -59,26 +116,24 @@
 
         .edge {
             fill: none;
-            stroke: #a0aec0;
-            stroke-width: 2px;
+            stroke: #bdc3c7;
+            stroke-width: 2.5px;
             stroke-linejoin: round;
             stroke-linecap: round;
-            transition: stroke 0.3s;
         }
-
         .edge.dotted { stroke-dasharray: 6, 4; }
 
         /* --- NODES --- */
         .node {
             position: absolute;
             width: 180px;
-            padding: 12px 15px;
+            padding: 12px 10px;
             border-radius: 12px;
             color: white;
             font-size: 14px;
             font-weight: 600;
             text-align: center;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
             cursor: pointer;
             z-index: 1;
             transition: transform 0.2s, box-shadow 0.2s;
@@ -93,47 +148,17 @@
 
         .node:hover {
             transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+            box-shadow: 0 12px 24px rgba(0,0,0,0.15);
             z-index: 10;
         }
 
-        .node.blue { background: linear-gradient(135deg, #00aeef, #0090c5); }
-        .node.red { background: linear-gradient(135deg, #e2231a, #bd1c14); }
-        .node.yellow { 
-            background: linear-gradient(135deg, #ffb500, #e0a000); 
-            color: #1a202c; 
-        }
-        .node.purple { background: linear-gradient(135deg, #8e44ad, #732d91); }
-        
+        .node.blue { background: linear-gradient(135deg, #00aeef, #008bc0); }
+        .node.red { background: linear-gradient(135deg, #e2231a, #b91c14); }
+        .node.yellow { background: linear-gradient(135deg, #ffb500, #e5a200); color: #222; }
+        .node.purple { background: linear-gradient(135deg, #8e44ad, #71368a); }
         .node.wide { width: 400px; }
 
-        /* --- CONTROLS --- */
-        .controls {
-            position: fixed;
-            bottom: 30px;
-            left: 30px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 90;
-        }
-        .btn {
-            width: 44px; height: 44px;
-            border-radius: 50%;
-            border: none;
-            background: white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            cursor: pointer;
-            font-size: 16px;
-            color: #4a5568;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        .btn:hover { background: #edf2f7; transform: scale(1.1); }
-
-        /* --- PANEL --- */
+        /* --- SIDE PANEL --- */
         .panel {
             position: fixed;
             right: 0;
@@ -141,130 +166,293 @@
             width: var(--panel-width);
             height: 100%;
             background: white;
-            box-shadow: -5px 0 30px rgba(0,0,0,0.1);
+            box-shadow: -5px 0 30px rgba(0,0,0,0.15);
             transform: translateX(100%);
-            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 200;
+            transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            z-index: 100;
             display: flex;
             flex-direction: column;
         }
         .panel.open { transform: translateX(0); }
 
-        @media (max-width: 768px) {
-            .panel {
-                top: auto;
-                bottom: 0;
-                width: 100%;
-                height: 60vh;
-                transform: translateY(100%);
-                border-top-left-radius: 20px;
-                border-top-right-radius: 20px;
-            }
-            .panel.open { transform: translateY(0); }
-            .controls { bottom: 20px; left: 20px; flex-direction: row; }
-        }
-
         .panel-header {
             padding: 25px;
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            flex-shrink: 0; /* Don't shrink header */
         }
-        
+
         .panel-tag {
-            font-size: 10px;
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: #64748b;
-            font-weight: 800;
-            background: #e2e8f0;
+            letter-spacing: 1px;
+            color: #fff;
             padding: 4px 8px;
             border-radius: 4px;
             display: inline-block;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
+            background: #95a5a6;
         }
 
-        .panel-title { margin: 0; color: #1e293b; font-size: 22px; line-height: 1.2; }
-        .panel-body { padding: 25px; line-height: 1.6; color: #475569; overflow-y: auto; }
-        
-        .close-btn { 
-            position: absolute; top: 20px; right: 20px; 
-            background: #edf2f7; border: none; 
-            width: 32px; height: 32px; border-radius: 50%;
+        .panel-title {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 22px;
+            line-height: 1.3;
+        }
+
+        .panel-body {
+            padding: 25px;
+            overflow-y: auto;
+            background: #fafafa;
+            flex-grow: 1;
+            color: #333; /* Explicit text color */
+        }
+
+        /* Info Boxes */
+        .info-box {
+            background: #fff;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            border-left: 5px solid transparent;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            color: #444; /* Ensure text is dark */
+        }
+
+        .info-box h4 {
+            margin: 0 0 10px 0;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.9;
+            color: inherit;
+        }
+
+        .box-issue {
+            background: #fff5f5;
+            color: #c0392b;
+            border-left-color: var(--red);
+        }
+
+        .box-action {
+            background: #f0fbf4;
+            color: #27ae60;
+            border-left-color: var(--green);
+        }
+
+        .box-context {
+            background: #fff;
+            color: #555;
+            border-left-color: #95a5a6;
+            border: 1px solid #eee;
+            border-left-width: 5px;
+        }
+
+        .close-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: #f0f2f5; border: none;
+            width: 36px; height: 36px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; color: #64748b;
+            cursor: pointer; color: #7f8c8d; transition: all 0.2s;
+        }
+        .close-btn:hover { background: #e2e6ea; color: #2c3e50; }
+
+        /* --- CONTROLS --- */
+        .controls {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            gap: 10px;
+            z-index: 90;
+        }
+        .btn {
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            border: none;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            cursor: pointer; font-size: 16px; color: #555;
+            transition: transform 0.1s;
+        }
+        .btn:hover { transform: scale(1.1); }
+
+        /* --- MOBILE --- */
+        @media (max-width: 768px) {
+            .floating-header { width: calc(100% - 40px); top: 20px; left: 20px; padding: 15px; }
+            .header-logo { height: 40px; }
+            .header-title { font-size: 16px; }
+            .panel {
+                top: auto; bottom: 0; width: 100%; height: 70vh;
+                transform: translateY(100%);
+                border-radius: 20px 20px 0 0;
+            }
+            .panel.open { transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-<header style="background-color: white;">
-<h1>A Child's Journey - HNRP IDP Journey Map</h1><img src="https://i.ibb.co/tTknCBGz/Slide1.png" style="height:200px; width: 420px;"></header>
-</header>
+
+<!-- HEADER -->
+<div class="floating-header">
+    <img src="https://i.ibb.co/tTknCBGz/Slide1.png" alt="Logo" class="header-logo">
+    <h1 id="headerTitle" class="header-title">A Child's Journey - HNRP IDP Journey Map</h1>
+    <div class="lang-switch">
+        <button class="lang-btn active" onclick="setLanguage('en')">EN</button>
+        <button class="lang-btn" onclick="setLanguage('uk')">UA</button>
+    </div>
+</div>
+
+<!-- CANVAS -->
 <div id="viewport">
     <div id="transform-layer">
-        <!-- SVG LAYER -->
+        <!-- SVG Layer for Lines -->
         <svg id="svg-layer">
             <defs>
-                <!-- Small, sharp arrow -->
-                <marker id="arrow" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto" markerUnits="strokeWidth">
-                    <path d="M0,0 L0,5 L5,2.5 z" fill="#a0aec0" />
+                <marker id="arrow" markerWidth="4" markerHeight="4" refX="4" refY="2" orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L0,4 L4,2 z" fill="#bdc3c7" />
                 </marker>
             </defs>
-            <!-- Paths -->
         </svg>
-        <!-- Nodes -->
+        <!-- Node Container -->
         <div id="node-container"></div>
     </div>
 </div>
 
+<!-- ZOOM CONTROLS -->
 <div class="controls">
     <button class="btn" onclick="zoom(1.2)"><i class="fas fa-plus"></i></button>
     <button class="btn" onclick="zoom(0.8)"><i class="fas fa-minus"></i></button>
     <button class="btn" onclick="fitToScreen()"><i class="fas fa-expand"></i></button>
 </div>
 
+<!-- SIDE PANEL -->
 <div id="sidePanel" class="panel">
     <button class="close-btn" onclick="closePanel()"><i class="fas fa-times"></i></button>
     <div class="panel-header">
         <span id="pTag" class="panel-tag">Tag</span>
         <h2 id="pTitle" class="panel-title">Title</h2>
     </div>
-    <div class="panel-body">
-        <p id="pDesc">Description text.</p>
+    <div id="pBody" class="panel-body">
+        <!-- Content injects here -->
     </div>
 </div>
 
 <script>
-    /* --- DATA & LAYOUT --- */
-    const nodes = [
-        { id: 'n1', x: 700, y: 50,  w: 180, label: 'Pre-crisis life', type: 'blue', meta: { tag: 'Journey', desc: 'Normal Development Context <br><br> •Children in stable family/community settings <br><br> •Regular school attendance •Social connections and play for child growth <br><br> •Access to healthcare and social services as well as a safe environment (water, sanitation and heating)' } },
-        { id: 'n2', x: 700, y: 180, w: 180, label: 'Conflict exposure', type: 'red', meta: { tag: 'High Risk Stage', desc: 'Conflict Exposure & Initial Trauma <br><br> Immediate Risks <br>• Direct exposure to violence and hostilities <br>• Explosive ordnance and drone attacks <br>• 3,798 educational institutions damaged and exacerbating learning loss <br>• 1,109km of water networks, 82 water pumping stations, 12 water treatment plants, and 327 km of sewage networks damaged or destroyed <br>• Acute psychological trauma and fear with <br>• Learning loss and falling behind from expected learning level <br><br> Critical Needs<br>• Immediate physical safety<br>• Psychosocial first aid <br>• Age-appropriate crisis information<br>•Access to safe learning /catchup learning <br>• Safe water and heating<br>• Safe medical and health care<br><br>Prevention & Early Response Interventions Advocacy and Joint Prevention Plan <br>•End attacks on civilian infrastructure (3,798 schools damaged)<br>• Cease use of explosive weapons in populated areas<br>• Avoid impact on caused through damage of educational facilities and health facilities<br>• Educational Continuity<br>• Safe learning spaces in conflict-affected areas<br>• Mobile education services<br>• Psychosocial support integrated in schools and' } },
-       
-        { id: 'n3', x: 700, y: 310, w: 180, label: 'Evacuation', type: 'yellow', meta: { tag: 'Decision Point', desc: 'Evacuation Decision Point<br><br>Key Factors<br>• Mandatory evacuation orders issued<br>• Family capacity for self-organized movement including funds<br>• Availability of transportation<br>• Destination options (including availability of humanitarian assistance) and support networks<br><br>Child-Specific Considerations<br>• Separation from caregivers during evacuation<br>• Special needs for children with disabilities<br>• Comfort items and continuity needs<br>• Separation from learning peers and familiar teachers' } },
-        
-        { id: 'n4', x: 200, y: 440, w: 180, label: 'Occupied Territories', type: 'purple', meta: { tag: 'OT/RF', desc: 'Children in Occupied Territories/Russian Federation <br><br> Grave Violations<br>• Documented cases of transfer of Ukrainian children to Russia, including change in names and nationality<br>• Challenging tracing and family reunification<br>• Cases child recruitment through online content with recruitment propaganda<br>• Limited humanitarian access <br><br> Humanitarian challenges<br>• Exposure to explosive weapons,<br>displacement<br>• Water crisis, lack of access to health,<br>education<br>• High risk of outbreaks, infection diseases, waterborne diseases' } },
+    let currentLang = 'en';
+    let scale = 1, pX = 0, pY = 0;
 
-
-        { id: 'n5', x: 450, y: 440, w: 180, label: 'Frontline children', type: 'red', meta: { tag: 'High Risk Stage', desc: 'Children Remaining in Frontline Areas<br><br>Hidden Population<br>• Families deliberately hide children from evacuation orders<br>• Children not visible (invisible children) in official evacuation data<br>• Family returning to frontlines after evacuation due to lack of support<br>• Self-imposed confinement due to security risks<br><br>Extreme Risks<br>• Constant exposure to drones and shelling<br>• Limited access to education, healthcare, social services, basic needs <br><br><br> Humanitarian Access<br>• Negotiate safe humanitarian corridors <br><br> Return and Reintegration<br>• Cross Border Family reunification<br>• Reintegration assistance in Ukraine<br><br>Monitoring and Reporting (CAAC)<br><br>Humanitarian assistance<br>• MHPSS, case management, EORE<br>• Access to health, water,' } },
-        
-        { id: 'n6', x: 950, y: 440, w: 180, label: 'Evacuation Process', type: 'blue', meta: { tag: 'Journey', desc: 'Evacuation Implementation<br><br>Process Types<br>•Evacuations conducted by humanitarian actors and<br>State actors<br>•Organized evacuations through transit centers<br>•Self-managed family evacuations<br>•Emergency evacuations during active hostilities<br><br><br>Child-Friendly Evacuation Support <br><br>• Keeping Families Together<br>• Prevent family separation during evacuation<br>• Joint evacuation planning for families<br>• Social workforce engaged and supported at different points of journey<br><br>Specialized Support<br>• Accessible transport for children with disabilities<br>• Emergency care arrangements for unaccompanied children<br><br>Child Protection Measures<br>• Family tracing during evacuation<br>• Special transport for children with disabilities<br>• Child-friendly evacuation procedures<br>• Provision of MPCA for families with children<br>• Age-appropriate evacuation information<br>• Comfort items and continuity planning<br>• Immediate protection screening and Case management' } },
-        
-        { id: 'n7', x: 1250, y: 500, w: 180, label: 'Family separation', type: 'red', meta: { tag: 'High Risk Stage', desc: 'Family Separation Crisis<br><br>Separation Scenarios<br>• 36% of households report family separation<br>• Caregivers sending children to safer areas ahead<br>• Fathers unable to evacuate due to conscription<br>rules<br>• Children placed with temporary caregivers<br>Protection Risks<br>• Increased vulnerability to violence, abuse, neglect<br>• Psychological distress from separation<br>• Risk of trafficking and exploitation<br>• Challenges in family reunification<br><br> Family Tracing & Reunification <br> Tracing Services<br>• Activate family tracing network<br><br>Reunification Support<br>• Safe transport for reunification<br>• Family assessment and support<br>• Post-reunification monitoring<br><br>Communication Services<br>• Free communication platforms for families<br>• Message relay services<br>• Regular contact facilitation'} },
-        { id: 'n8', x: 1450, y: 620, w: 180, label: 'Institutional Care', type: 'red', meta: { tag: 'High Risk Stage', desc: 'Children in Institutional Care<br><br>Current Scale<br>• 26,000 children live in 720 institutions<br>• Over 2,000 children from institutions evacuated<br>• 3,188 children returned to Ukraine from abroad<br>• 1,047 returned to residential care (not families)<br><br>System Challenges<br>• War is institutionalizing more children<br>• Overreliance on institutional vs family-based care<br>• Absence of sufficient foster families<br>• Risk of prolonged institutionalization' } },
-
-        { id: 'n9', x: 780, y: 570, w: 180, label: 'Transit Centers', type: 'blue', meta: { tag: 'Journey', desc: 'Current Situation<br>•17.7% of residents are children<br>• Overcrowded conditions in many sites<br>• Only 25% have disability-friendly facilities<br>• Limited child-friendly spaces<br>• Inadequate WASH facilities in some sites (and risk of infectious diseases)<br><br>Immediate Needs<br>• Safe spaces for play and learning<br>• Family tracing and communication<br>• Psychosocial support and counseling<br>• Child protection case management<br>• Cash assistance for families with children<br>• WASH facilities in transit and collective centers<br>• Hygiene items' } },
-
-
-        { id: 'n10', x: 1120, y: 570, w: 180, label: 'Community Living', type: 'blue', meta: { tag: 'Journey', desc: 'Living Situation<br>•85% of evacuees move to community settings<br>•60% of IDPs have rental costs in monthly expenses<br>•31% spend over 70% of income on housing<br>•Many live without formal rental agreements<br><br>Integration Challenges<br>• Fear of eviction and housing insecurity<br>• Access to offline education and quality healthcare<br>• Social integration and peer relationships<br>• Economic pressure on families' } },
-
-        { id: 'n11', x: 780, y: 700, w: 180, label: 'Collective sites', type: 'red', meta: { tag: 'High Risk Stage', desc: 'Long-term Challenges<br>• 81% of residents displaced for 18+ months<br>• 88% indicate intention to remain<br>•72% cite housing affordability as barrier to leaving<br>• Poor living conditions and limited privacy<br><br>Child-Specific Risks<br>• Exposure to unsafe, overcrowded conditions with high risk of disease outbreaks<br>• Limited access to child-friendly services including health care<br>• Educational disruption and social isolation – 45% of parents indicate negative consequences of displacement on their children’s education<br>• Increased risk of violence and exploitation<br><br>Community Integration Support<br><br>Housing and Cash Assistance<br>• Multipurpose cash assistance<br>• Legal aid support for families, including against eviction<br><br>Educational Continuity<br>• School enrollment support<br>• Catch-up/remedial education programs<br>• Language and integration support<br><br>Social Inclusion<br>• Community integration activities<br>• Peer support networks for children<br><br>Economic Support<br>• Family livelihood programs<br>• Positive Parenting and Skills training for parents<br>• Child care support for working parents' } },
-        
-        
-        { id: 'n12', x: 700, y: 830, w: 400, label: 'Protracted displacement', type: 'red', className: 'wide', meta: { tag: 'High Risk Stage', desc: 'Long-term Displacement Impacts<br><br>Mental Health Crisis<br>• 43% of children in programs show psychosocial distress<br>• 1.5 million children at risk of depression/PTSD<br>• 1 in 5 children lost a close relative or friend<br>• 84% of households identify distress as overwhelming risk<br><br>Emerging Threats<br>• Online recruitment and exploitation<br>• Russian Federation grooming children via social media<br>• 4,476 children victims of crimes (Jan-July 2025)<br>• Justice system treating children punitively vs protectively<br>• 70% face acute material deprivation<br><br>Educational Impact<br>• 1.2 million children missing full-time learning<br>• 65% of frontline children in online schooling<br>• Digital divide affecting access<br><br>Sexual Exploitation & Trafficking<br>• 76% of trafficking cases involve labor exploitation<br>• Risk of trafficking for sexual exploitation documented<br>• Economic desperation increasing survival sex risks<br>• Vulnerability along evacuation routes<br><br>Technology-Facilitated Violence<br>• Online grooming and sexual exploitation<br>• Digital harassment and abuse<br>• Unsupervised online learning increasing exposure<br>• Recruitment through social media platforms<br><br>Movement & Safety Restrictions<br>• Women and girls feel less safe outside home<br>• Absence of public street lighting restricts movement<br>• Collective housing creating vulnerabilities<br>• Risk from substance abuse in communities<br><br>Mental Health & Psychosocial Support<br>Community-Based and Family Support<br>• Peer support groups for children and adolescents<br>• Resilience Services, including positive parenting<br>• Individual and group therapy and counseling<br>• Support groups for displaced families<br><br>Child-Friendly Justice<br>Victim-Centered Approach<br>• Treat recruited children as victims, not criminals<br>• Free specialized legal aid for children<br>• Child-sensitive court procedures<br>• Protection from harsh punishments for recruited children<br>• Alternatives to Detention<br>• Reintegration Support<br><br>Learning Recovery<br>• Catch up/remedial education<br>• Ensuring availability of inclusive education<br><br>School-Based MHPSS Services<br>• School counselors and psychologists<br>• Teacher training on trauma-informed approaches<br>• Classroom-based social-emotional learning<br><br>Girls-Focused Protection Interventions<br>GBV Prevention & Response<br>• Specialized GBV case management<br>• Legal aid and justice support<br>• Safe reporting mechanisms<br>• Survivor-centered services'} },
-        
-        { id: 'n13', x: 500, y: 960, w: 180, label: 'Post-displacement', type: 'yellow', meta: { tag: 'Phase 4', desc: 'Decision Point' } },
-        
-        { id: 'n14', x: 200, y: 1090, w: 180, label: 'Return to Risk', type: 'red', meta: { tag: 'Outcome', desc: 'Return to Unsafe Areas<br><br>Return Motivations<br>• 18% return due to inability to earn income in displacement<br>• 25% cite lack of affordable housing<br>• Family reunification needs<br>• Property monitoring and asset protection<br><br>Child-Specific Risks<br>• Re-exposure to active hostilities<br>• Limited access to education and healthcare<br>• Family separation if women return alone<br>• Continued trauma and stress' } },
-        { id: 'n15', x: 800, y: 1090, w: 180, label: 'Local integration', type: 'blue', meta: { tag: 'Outcome', desc: 'Successful Local Integration<br><br>Positive Outcomes<br>• Stable housing and community connections<br>• Access to quality education and healthcare, safe water & sanitation, and heating<br>• Enrollment in social protection schemes, as relevant<br>• Social integration and peer relationships<br>• Economic stability for families<br><br>Success Factors<br>• Strong community support systems<br>• Adequate and affordable housing<br>• Quality social services<br>• Educational continuity and support' } },
+    // --- DATA ---
+    const data = [
+        {
+            id: 'n1', x: 700, y: 50, w: 180, type: 'blue',
+            content: {
+                en: { label: 'Pre-crisis life', tag: 'Journey', context: 'Normal Development Context', actions: '• Children in stable family/community settings<br>• Regular school attendance<br>• Social connections and play for child growth<br>• Access to healthcare and social services' },
+                uk: { label: 'Життя до кризи', tag: 'Подорож', context: 'Контекст нормального розвитку', actions: '• Діти у стабільних сімейних/громадських умовах<br>• Регулярне відвідування школи<br>• Соціальні зв’язки та ігри для розвитку дитини<br>• Доступ до охорони здоров’я та соціальних послуг' }
+            }
+        },
+        {
+            id: 'n2', x: 700, y: 180, w: 180, type: 'red',
+            content: {
+                en: { label: 'Conflict exposure', tag: 'High Risk Stage', issues: '<b>Immediate Risks</b><br>• Direct exposure to violence and hostilities<br>• Explosive ordnance and drone attacks<br>• 3,798 educational institutions damaged<br>• Water/heating infrastructure destroyed<br>• Acute psychological trauma', actions: '<b>Response Interventions</b><br>• Immediate physical safety<br>• Psychosocial first aid<br>• Safe learning spaces<br>• Mobile education services<br>• End attacks on civilian infrastructure advocacy' },
+                uk: { label: 'Вплив конфлікту', tag: 'Високий ризик', issues: '<b>Негайні ризики</b><br>• Прямий вплив насильства та бойових дій<br>• Вибухонебезпечні предмети та атаки дронів<br>• Пошкоджено 3 798 закладів освіти<br>• Зруйнована інфраструктура водопостачання/опалення<br>• Гостра психологічна травма', actions: '<b>Заходи реагування</b><br>• Негайна фізична безпека<br>• Перша психологічна допомога<br>• Безпечні навчальні простори<br>• Мобільні освітні послуги<br>• Адвокація припинення нападів на цивільну інфраструктуру' }
+            }
+        },
+        {
+            id: 'n3', x: 700, y: 310, w: 180, type: 'yellow',
+            content: {
+                en: { label: 'Evacuation', tag: 'Decision Point', context: '<b>Key Factors</b><br>• Mandatory evacuation orders<br>• Family capacity and funds<br>• Transport availability', issues: '<b>Child-Specific Risks</b><br>• Separation from caregivers<br>• Disruption of routine<br>• Lack of special needs transport', actions: '<b>Support Needed</b><br>• Organized transport<br>• Accompaniment for unaccompanied children' },
+                uk: { label: 'Евакуація', tag: 'Точка прийняття рішення', context: '<b>Ключові фактори</b><br>• Накази про обов’язкову евакуацію<br>• Можливості сім’ї та кошти<br>• Наявність транспорту', issues: '<b>Ризики для дітей</b><br>• Розлучення з опікунами<br>• Порушення розпорядку дня<br>• Відсутність транспорту для особливих потреб', actions: '<b>Необхідна підтримка</b><br>• Організований транспорт<br>• Супровід дітей без нагляду' }
+            }
+        },
+        {
+            id: 'n4', x: 200, y: 440, w: 180, type: 'purple',
+            content: {
+                en: { label: 'Occupied Territories', tag: 'OT/RF', issues: '<b>Grave Violations</b><br>• Transfer of children to Russia<br>• Change of names/nationality<br>• Child recruitment propaganda<br>• Limited humanitarian access<br>• Disease outbreaks due to poor water/health access', actions: '<b>Response</b><br>• Remote monitoring<br>• Advocacy for access<br>• Tracing and reunification mechanisms' },
+                uk: { label: 'Окуповані території', tag: 'ТОТ/РФ', issues: '<b>Серйозні порушення</b><br>• Переміщення дітей до Росії<br>• Зміна імен/громадянства<br>• Пропаганда вербування дітей<br>• Обмежений гуманітарний доступ<br>• Спалахи хвороб через поганий доступ до води/медицини', actions: '<b>Реагування</b><br>• Дистанційний моніторинг<br>• Адвокація доступу<br>• Механізми розшуку та возз’єднання' }
+            }
+        },
+        {
+            id: 'n5', x: 450, y: 440, w: 180, type: 'red',
+            content: {
+                en: { label: 'Frontline children', tag: 'High Risk Stage', issues: '<b>Extreme Risks</b><br>• Constant exposure to shelling<br>• "Invisible children" hidden from evacuation<br>• Lack of basic services (health, education)', actions: '<b>Response</b><br>• Negotiate humanitarian corridors<br>• MHPSS and Case Management<br>• Cross-border reunification support' },
+                uk: { label: 'Діти на лінії фронту', tag: 'Високий ризик', issues: '<b>Екстремальні ризики</b><br>• Постійний вплив обстрілів<br>• "Невидимі діти", приховані від евакуації<br>• Відсутність базових послуг (здоров’я, освіта)', actions: '<b>Реагування</b><br>• Переговори про гуманітарні коридори<br>• ПЗПСП та ведення випадків<br>• Підтримка транскордонного возз’єднання' }
+            }
+        },
+        {
+            id: 'n6', x: 950, y: 440, w: 180, type: 'blue',
+            content: {
+                en: { label: 'Evacuation Process', tag: 'Journey', context: 'Types: Organized (State/NGO) or Self-managed.', actions: '<b>Child Protection Measures</b><br>• Keeping families together<br>• Identification of UASC (Unaccompanied Separated Children)<br>• Specialized transport for disabilities<br>• Comfort items and MPCA (Cash Assistance)' },
+                uk: { label: 'Процес евакуації', tag: 'Подорож', context: 'Типи: Організована (Держава/НУО) або Самостійна.', actions: '<b>Заходи захисту дітей</b><br>• Збереження сімей разом<br>• Ідентифікація дітей без супроводу<br>• Спеціалізований транспорт для осіб з інвалідністю<br>• Речі першої необхідності та грошова допомога' }
+            }
+        },
+        {
+            id: 'n7', x: 1250, y: 500, w: 180, type: 'red',
+            content: {
+                en: { label: 'Family separation', tag: 'High Risk Stage', issues: '<b>Separation Scenarios</b><br>• 36% households report separation<br>• Men conscripted, women/children leave<br>• Risk of trafficking and exploitation<br>• Psychological distress', actions: '<b>Reunification Support</b><br>• Activate tracing networks<br>• Free communication platforms<br>• Family assessment and support' },
+                uk: { label: 'Розлучення сімей', tag: 'Високий ризик', issues: '<b>Сценарії розлучення</b><br>• 36% домогосподарств повідомляють про розлучення<br>• Чоловіки мобілізовані, жінки/діти виїжджають<br>• Ризик торгівлі людьми та експлуатації<br>• Психологічний стрес', actions: '<b>Підтримка возз’єднання</b><br>• Активація мереж розшуку<br>• Безкоштовні платформи зв’язку<br>• Оцінка та підтримка сім’ї' }
+            }
+        },
+        {
+            id: 'n8', x: 1450, y: 620, w: 180, type: 'red',
+            content: {
+                en: { label: 'Institutional Care', tag: 'High Risk Stage', issues: '<b>System Challenges</b><br>• War institutionalizing more children<br>• 26,000 children in 720 institutions<br>• Lack of foster families', actions: '<b>Reform Needed</b><br>• Move towards family-based care<br>• Monitor returned children' },
+                uk: { label: 'Інституційний догляд', tag: 'Високий ризик', issues: '<b>Виклики системи</b><br>• Війна призводить до інституціалізації дітей<br>• 26 000 дітей у 720 закладах<br>• Нестача патронатних сімей', actions: '<b>Необхідні реформи</b><br>• Перехід до сімейних форм виховання<br>• Моніторинг дітей, що повернулися' }
+            }
+        },
+        {
+            id: 'n9', x: 780, y: 570, w: 180, type: 'blue',
+            content: {
+                en: { label: 'Transit Centers', tag: 'Journey', issues: '<b>Situation</b><br>• Overcrowded<br>• Limited disability access (25%)<br>• Infectious disease risks', actions: '<b>Immediate Needs</b><br>• Safe spaces for play<br>• Family tracing<br>• Hygiene items and WASH facilities' },
+                uk: { label: 'Транзитні центри', tag: 'Подорож', issues: '<b>Ситуація</b><br>• Переповненість<br>• Обмежений доступ для осіб з інвалідністю (25%)<br>• Ризики інфекційних захворювань', actions: '<b>Негайні потреби</b><br>• Безпечні простори для ігор<br>• Розшук сімей<br>• Гігієнічні набори та санітарні умови' }
+            }
+        },
+        {
+            id: 'n10', x: 1120, y: 570, w: 180, type: 'blue',
+            content: {
+                en: { label: 'Community Living', tag: 'Journey', issues: '<b>Challenges</b><br>• High rental costs (31% spend >70% income)<br>• Fear of eviction<br>• Lack of rental agreements', actions: '<b>Support</b><br>• Cash for rent<br>• Legal assistance for agreements<br>• Social integration programs' },
+                uk: { label: 'Проживання в громаді', tag: 'Подорож', issues: '<b>Виклики</b><br>• Висока вартість оренди (31% витрачають >70% доходу)<br>• Страх виселення<br>• Відсутність договорів оренди', actions: '<b>Підтримка</b><br>• Грошова допомога на оренду<br>• Юридична допомога з договорами<br>• Програми соціальної інтеграції' }
+            }
+        },
+        {
+            id: 'n11', x: 780, y: 700, w: 180, type: 'red',
+            content: {
+                en: { label: 'Collective sites', tag: 'High Risk Stage', issues: '<b>Risks</b><br>• Overcrowding & disease outbreaks<br>• Limited privacy and child-friendly spaces<br>• Increased risk of violence/exploitation', actions: '<b>Interventions</b><br>• Site management support<br>• Educational continuity<br>• Livelihood programs for parents' },
+                uk: { label: 'Колективні центри', tag: 'Високий ризик', issues: '<b>Ризики</b><br>• Переповненість та спалахи хвороб<br>• Обмежена приватність та відсутність просторів для дітей<br>• Підвищений ризик насильства/експлуатації', actions: '<b>Втручання</b><br>• Підтримка управління місцями проживання<br>• Безперервність освіти<br>• Програми зайнятості для батьків' }
+            }
+        },
+        {
+            id: 'n12', x: 700, y: 830, w: 400, type: 'red', className: 'wide',
+            content: {
+                en: { label: 'Protracted displacement', tag: 'High Risk Stage', issues: '<b>Long-term Impacts</b><br>• Mental Health Crisis (1.5M at risk of PTSD)<br>• Online recruitment/exploitation by RF<br>• Educational loss (1.2M missing school)<br>• GBV and trafficking risks', actions: '<b>Comprehensive Support</b><br>• Community-based MHPSS<br>• Child-Friendly Justice<br>• Learning recovery & catch-up classes<br>• GBV prevention & response' },
+                uk: { label: 'Затяжне переміщення', tag: 'Високий ризик', issues: '<b>Довгострокові наслідки</b><br>• Криза ментального здоров’я (1.5 млн ризик ПТСР)<br>• Онлайн вербування/експлуатація з боку РФ<br>• Втрата освіти (1.2 млн не відвідують школу)<br>• Ризики ГЗН та торгівлі людьми', actions: '<b>Комплексна підтримка</b><br>• ПЗПСП на рівні громади<br>• Правосуддя, дружнє до дитини<br>• Відновлення навчання та додаткові заняття<br>• Запобігання та реагування на ГЗН' }
+            }
+        },
+        {
+            id: 'n13', x: 500, y: 960, w: 180, type: 'yellow',
+            content: {
+                en: { label: 'Post-displacement', tag: 'Decision Point', context: 'Strategic decision making regarding future settlement.', actions: 'Planning for durable solutions.' },
+                uk: { label: 'Після переміщення', tag: 'Точка прийняття рішення', context: 'Стратегічне прийняття рішень щодо майбутнього розселення.', actions: 'Планування довгострокових рішень.' }
+            }
+        },
+        {
+            id: 'n14', x: 200, y: 1090, w: 180, type: 'red',
+            content: {
+                en: { label: 'Return to Risk', tag: 'Outcome', issues: '<b>Drivers</b><br>• Lack of income/housing in displacement<br>• Family reunification needs<br><b>Risks</b><br>• Re-exposure to hostilities<br>• Trauma reactivation', actions: '<b>Response</b><br>• Risk education (EORE)<br>• Humanitarian aid in hard-to-reach areas' },
+                uk: { label: 'Повернення до ризику', tag: 'Результат', issues: '<b>Причини</b><br>• Відсутність доходу/житла при переміщенні<br>• Потреба у возз’єднанні сім’ї<br><b>Ризики</b><br>• Повторний вплив бойових дій<br>• Реактивація травми', actions: '<b>Реагування</b><br>• Навчання ризикам (EORE)<br>• Гуманітарна допомога у важкодоступних районах' }
+            }
+        },
+        {
+            id: 'n15', x: 800, y: 1090, w: 180, type: 'blue',
+            content: {
+                en: { label: 'Local integration', tag: 'Outcome', context: '<b>Success Indicators</b><br>• Stable housing<br>• Access to education/health<br>• Social connections', actions: '<b>Support</b><br>• Employment programs<br>• Affordable housing initiatives<br>• Anti-discrimination efforts' },
+                uk: { label: 'Місцева інтеграція', tag: 'Результат', context: '<b>Індикатори успіху</b><br>• Стабільне житло<br>• Доступ до освіти/медицини<br>• Соціальні зв’язки', actions: '<b>Підтримка</b><br>• Програми працевлаштування<br>• Ініціативи доступного житла<br>• Протидія дискримінації' }
+            }
+        }
     ];
 
     const connections = [
@@ -278,220 +466,157 @@
         { from: 'n6', to: 'n7', type: 'side-dotted' },
         { from: 'n7', to: 'n8', type: 'side-dotted-down' },
         { from: 'n9', to: 'n11', type: 'straight' },
-        { from: 'n10', to: 'n12', type: 'ortho-deep' }, 
+        { from: 'n10', to: 'n12', type: 'ortho-deep' },
         { from: 'n11', to: 'n12', type: 'elbow-in' },
         { from: 'n12', to: 'n13', type: 'elbow-left-step' },
         { from: 'n13', to: 'n14', type: 'fork-left-btm' },
         { from: 'n13', to: 'n15', type: 'fork-right-btm' }
     ];
 
-    // --- RENDER ENGINE ---
-    const container = document.getElementById('node-container');
-    const svg = document.getElementById('svg-layer');
+    // --- INIT ---
+    function init() {
+        renderNodes();
+        drawConnectors();
+        fitToScreen();
+    }
 
-    // Create Nodes
-    nodes.forEach(n => {
-        const el = document.createElement('div');
-        el.className = `node ${n.type} ${n.className || ''}`;
-        el.style.left = n.x + 'px';
-        el.style.top = n.y + 'px';
-        el.style.width = n.w + 'px';
-        el.textContent = n.label;
-        
-        const activate = (e) => {
-            e.stopPropagation();
-            openPanel(n);
-        };
-        el.addEventListener('click', activate);
-        el.addEventListener('touchstart', activate, {passive: true});
+    function renderNodes() {
+        const container = document.getElementById('node-container');
+        container.innerHTML = ''; 
 
-        container.appendChild(el);
-    });
+        data.forEach(n => {
+            const el = document.createElement('div');
+            el.className = `node ${n.type} ${n.className || ''}`;
+            el.id = n.id;
+            el.style.left = n.x + 'px';
+            el.style.top = n.y + 'px';
+            el.style.width = n.w + 'px';
+            el.innerHTML = n.content[currentLang].label;
+            
+            const activate = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openPanel(n);
+            };
+            el.addEventListener('click', activate);
+            el.addEventListener('touchstart', activate, {passive: false});
 
-    // Create Connectors
-    connections.forEach(conn => {
-        const start = nodes.find(n => n.id === conn.from);
-        const end = nodes.find(n => n.id === conn.to);
+            container.appendChild(el);
+        });
+    }
 
-        const startX = start.x + (start.w) / 2;
-        const startY = start.y + 54; 
-        
-        const endX = end.x + (end.w) / 2;
-        const endY = end.y; 
+    function drawConnectors() {
+        const layer = document.getElementById('svg-layer');
+        const paths = layer.querySelectorAll('path');
+        paths.forEach(p => p.remove());
 
-        let d = '';
+        connections.forEach(conn => {
+            const start = data.find(n => n.id === conn.from);
+            const end = data.find(n => n.id === conn.to);
+            if(!start || !end) return;
 
-        if (conn.type === 'straight') {
-            d = `M ${startX} ${startY} L ${endX} ${endY - 6}`;
-        }
-        else if (conn.type.includes('fork-left')) {
-            const midY = startY + 25;
-            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
-        }
-        else if (conn.type.includes('fork-right')) {
-            const midY = startY + 25;
-            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
-        }
-        else if (conn.type === 'fork-down-left') {
-            const midY = endY - 25;
-            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
-        }
-        else if (conn.type === 'fork-down-right') {
-            const midY = endY - 25;
-            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
-        }
-        else if (conn.type === 'ortho-deep') {
-            const deepY = 790; 
-            d = `M ${startX} ${startY} L ${startX} ${deepY} L ${endX + 80} ${deepY} L ${endX + 80} ${endY - 6}`; 
-        }
-        else if (conn.type === 'elbow-in') {
-            const midY = (startY + endY)/2;
-            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
-        }
-        else if (conn.type === 'elbow-left-step') {
-            d = `M ${startX} ${startY} L ${startX} ${endY - 25} L ${endX} ${endY - 25} L ${endX} ${endY - 6}`;
-        }
-        else if (conn.type === 'side-dotted') {
-            const sRx = start.x + start.w;
-            const sRy = start.y + 27;
-            const eLx = end.x;
-            const eLy = end.y + 27;
-            d = `M ${sRx} ${sRy} C ${sRx+50} ${sRy}, ${eLx-50} ${eLy}, ${eLx - 6} ${eLy}`;
-        }
-        else if (conn.type === 'side-dotted-down') {
-            const sRx = start.x + start.w;
-            const sRy = start.y + 27;
-            const eLx = end.x;
-            const eLy = end.y + 27;
-            d = `M ${sRx} ${sRy} L ${eLx - 30} ${sRy} L ${eLx - 30} ${eLy} L ${eLx - 6} ${eLy}`;
-        }
-        else if (conn.type === 'fork-left-btm') {
-            const midY = endY - 25;
-            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
-        }
-        else if (conn.type === 'fork-right-btm') {
-            const midY = endY - 25;
-            d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 6}`;
-        }
+            const startX = start.x + (start.w / 2);
+            const startY = start.y + 54; 
+            const endX = end.x + (end.w / 2);
+            const endY = end.y;
 
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", d);
-        path.setAttribute("class", "edge " + (conn.type.includes('dotted') ? "dotted" : ""));
-        path.setAttribute("marker-end", "url(#arrow)");
-        svg.appendChild(path);
-    });
+            let d = '';
+            if (conn.type === 'straight') d = `M ${startX} ${startY} L ${endX} ${endY - 4}`;
+            else if (conn.type.includes('fork-left')) { const midY = startY + 25; d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 4}`; }
+            else if (conn.type.includes('fork-right')) { const midY = startY + 25; d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 4}`; }
+            else if (conn.type.includes('fork-down')) { const midY = endY - 25; d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 4}`; }
+            else if (conn.type === 'ortho-deep') { const deepY = 790; d = `M ${startX} ${startY} L ${startX} ${deepY} L ${endX + 80} ${deepY} L ${endX + 80} ${endY - 4}`; }
+            else if (conn.type === 'elbow-in') { const midY = (startY + endY)/2; d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 4}`; }
+            else if (conn.type === 'elbow-left-step') { d = `M ${startX} ${startY} L ${startX} ${endY - 25} L ${endX} ${endY - 25} L ${endX} ${endY - 4}`; }
+            else if (conn.type === 'side-dotted') { const sRx = start.x + start.w; const sRy = start.y + 27; const eLx = end.x; const eLy = end.y + 27; d = `M ${sRx} ${sRy} C ${sRx+50} ${sRy}, ${eLx-50} ${eLy}, ${eLx - 4} ${eLy}`; }
+            else if (conn.type === 'side-dotted-down') { const sRx = start.x + start.w; const sRy = start.y + 27; const eLx = end.x; const eLy = end.y + 27; d = `M ${sRx} ${sRy} L ${eLx - 30} ${sRy} L ${eLx - 30} ${eLy} L ${eLx - 4} ${eLy}`; }
+            else if (conn.type === 'fork-left-btm') { const midY = endY - 25; d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 4}`; }
+            else if (conn.type === 'fork-right-btm') { const midY = endY - 25; d = `M ${startX} ${startY} L ${startX} ${midY} L ${endX} ${midY} L ${endX} ${endY - 4}`; }
 
-    // --- PAN & ZOOM LOGIC ---
-    let scale = 1;
-    let pX = 0, pY = 0;
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", d);
+            path.setAttribute("class", "edge " + (conn.type.includes('dotted') ? "dotted" : ""));
+            path.setAttribute("marker-end", "url(#arrow)");
+            layer.appendChild(path);
+        });
+    }
+
+    // --- PAN / ZOOM ---
     const layer = document.getElementById('transform-layer');
     const viewport = document.getElementById('viewport');
-
-    let isDragging = false;
-    let startX = 0, startY = 0;
+    let isDragging = false, startX, startY;
 
     function updateTransform() {
         layer.style.transform = `translate(${pX}px, ${pY}px) scale(${scale})`;
     }
 
-    // Auto-fit function
     function fitToScreen() {
-        // Find bounds of all nodes
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        nodes.forEach(n => {
-            if(n.x < minX) minX = n.x;
-            if(n.x + n.w > maxX) maxX = n.x + n.w;
-            if(n.y < minY) minY = n.y;
-            if(n.y + 54 > maxY) maxY = n.y + 54;
-        });
-
-        // Add padding
-        const padding = 50;
-        const contentW = (maxX - minX) + (padding * 2);
-        const contentH = (maxY - minY) + (padding * 2);
-        
-        const viewW = window.innerWidth;
-        const viewH = window.innerHeight;
-
-        // Calculate Scale to fit
-        const scaleX = viewW / contentW;
-        const scaleY = viewH / contentH;
-        scale = Math.min(scaleX, scaleY, 1); // Max scale 1 to prevent zooming in too much on large screens
-
-        // Calculate Position to center
-        // Center of content in node coords
-        const contentCenterX = minX + (maxX - minX) / 2;
-        const contentCenterY = minY + (maxY - minY) / 2;
-
-        pX = (viewW / 2) - (contentCenterX * scale);
-        pY = (viewH / 2) - (contentCenterY * scale);
-
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        scale = Math.min(w / 1600, h / 1200);
+        if (scale > 1) scale = 1;
+        if (scale < 0.3) scale = 0.3;
+        pX = (w - (1500 * scale)) / 2;
+        pY = 50 * scale;
         updateTransform();
     }
 
-    // Mouse Events
-    viewport.addEventListener('mousedown', e => {
-        isDragging = true;
-        startX = e.clientX - pX;
-        startY = e.clientY - pY;
-    });
-    window.addEventListener('mouseup', () => isDragging = false);
-    window.addEventListener('mousemove', e => {
-        if (!isDragging) return;
-        e.preventDefault();
-        pX = e.clientX - startX;
-        pY = e.clientY - startY;
-        updateTransform();
-    });
+    viewport.addEventListener('mousedown', e => { isDragging=true; startX=e.clientX-pX; startY=e.clientY-pY; });
+    window.addEventListener('mouseup', () => isDragging=false);
+    window.addEventListener('mousemove', e => { if(!isDragging) return; e.preventDefault(); pX=e.clientX-startX; pY=e.clientY-startY; updateTransform(); });
+    viewport.addEventListener('touchstart', e => { if(e.touches.length===1){isDragging=true; startX=e.touches[0].clientX-pX; startY=e.touches[0].clientY-pY;} }, {passive:false});
+    window.addEventListener('touchend', () => isDragging=false);
+    window.addEventListener('touchmove', e => { if(!isDragging) return; e.preventDefault(); pX=e.touches[0].clientX-startX; pY=e.touches[0].clientY-startY; updateTransform(); }, {passive:false});
+    window.zoom = f => { scale *= f; updateTransform(); };
 
-    // Touch Events
-    viewport.addEventListener('touchstart', e => {
-        if(e.touches.length === 1) {
-            isDragging = true;
-            startX = e.touches[0].clientX - pX;
-            startY = e.touches[0].clientY - pY;
-        }
-    }, {passive: false});
-    
-    window.addEventListener('touchend', () => isDragging = false);
-    
-    window.addEventListener('touchmove', e => {
-        if (!isDragging) return;
-        e.preventDefault(); 
-        pX = e.touches[0].clientX - startX;
-        pY = e.touches[0].clientY - startY;
-        updateTransform();
-    }, {passive: false});
+    // --- APP LOGIC ---
+    function setLanguage(lang) {
+        currentLang = lang;
+        document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.toggle('active', btn.textContent === lang.toUpperCase()));
+        document.getElementById('headerTitle').innerText = (lang === 'en') ? "A Child's Journey - HNRP IDP Journey Map" : "Подорож дитини - Карта шляху ВПО";
+        renderNodes();
+        closePanel();
+    }
 
-    window.zoom = (factor) => {
-        scale *= factor;
-        scale = Math.min(Math.max(0.3, scale), 2);
-        updateTransform();
-    };
-    
-    window.resetZoom = fitToScreen;
-
-    // --- PANEL LOGIC ---
-    function openPanel(data) {
-        document.getElementById('pTitle').innerHTML = data.label;
-        document.getElementById('pTag').innerHTML = data.meta.tag;
-        document.getElementById('pDesc').innerHTML = data.meta.desc;
+    function openPanel(nodeData) {
+        const content = nodeData.content[currentLang];
+        document.getElementById('pTitle').innerText = content.label;
+        document.getElementById('pTag').innerText = content.tag;
         
         const tag = document.getElementById('pTag');
-        if(data.type === 'blue') { tag.style.color = '#00aeef'; tag.style.background = '#e0f7ff'; }
-        else if(data.type === 'red') { tag.style.color = '#e2231a'; tag.style.background = '#ffe5e5'; }
-        else { tag.style.color = '#d69e00'; tag.style.background = '#fff8dc';}
+        if(nodeData.type === 'blue') tag.style.background = '#3498db';
+        else if(nodeData.type === 'red') tag.style.background = '#e74c3c';
+        else if(nodeData.type === 'yellow') tag.style.background = '#f1c40f';
+        else if(nodeData.type === 'purple') tag.style.background = '#8e44ad';
+
+        const body = document.getElementById('pBody');
+        body.innerHTML = '';
+
+        if (content.issues) {
+            const box = document.createElement('div');
+            box.className = 'info-box box-issue';
+            box.innerHTML = `<h4>${currentLang==='en'?'Issues & Risks':'Проблеми та Ризики'}</h4>${content.issues}`;
+            body.appendChild(box);
+        }
+        if (content.actions) {
+            const box = document.createElement('div');
+            box.className = 'info-box box-action';
+            box.innerHTML = `<h4>${currentLang==='en'?'Response':'Реагування'}</h4>${content.actions}`;
+            body.appendChild(box);
+        }
+        if (content.context) {
+            const box = document.createElement('div');
+            box.className = 'info-box box-context';
+            box.innerHTML = `<h4>${currentLang==='en'?'Context':'Контекст'}</h4>${content.context}`;
+            body.appendChild(box);
+        }
 
         document.getElementById('sidePanel').classList.add('open');
     }
 
-    window.closePanel = () => {
-        document.getElementById('sidePanel').classList.remove('open');
-    };
+    window.closePanel = () => document.getElementById('sidePanel').classList.remove('open');
 
-    // Initial Load
-    window.onload = fitToScreen;
-    window.onresize = fitToScreen;
+    init();
 
 </script>
 </body>
